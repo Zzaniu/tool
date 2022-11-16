@@ -31,16 +31,16 @@ Desc   :
 package errcode
 
 import (
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
 )
 
 // Acceptable 检查服务是否发生异常、超时、不可用或丢失
 func Acceptable(err error) bool {
-	switch status.Code(err) {
-	case codes.DeadlineExceeded, codes.Internal, codes.Unavailable, codes.DataLoss:
-		return false
-	default:
-		return true
-	}
+    switch status.Code(err) {
+    case codes.DeadlineExceeded, codes.Internal, codes.Unavailable, codes.DataLoss:
+        return false
+    default:
+        return true
+    }
 }

@@ -1,15 +1,15 @@
 package distributed_lock
 
 import (
-	"errors"
+    "errors"
 )
 
 var (
-	LockOccupied = errors.New("the lock has been occupied")
-	LockTimeout  = errors.New("the lock timeout")
+    LockOccupied = errors.New("the lock has been occupied")
+    LockTimeout  = errors.New("the lock timeout")
 )
 
 type DistributedLock interface {
-	Lock(string, int) error
-	UnLock() error
+    Lock(string, int) error
+    UnLock() error
 }

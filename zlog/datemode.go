@@ -31,94 +31,94 @@ Desc   :
 package zlog
 
 import (
-	"os"
-	"sync"
-	"time"
+    "os"
+    "sync"
+    "time"
 )
 
 type (
-	DateFileManage struct {
-		sync.Mutex
-		filePath       string
-		logWriteFile   *os.File
-		prevCutTime    time.Time
-		cutIntervalDay int
-		keepCnt        int // 保留日志个数
-		fileNameFormat Format
-	}
+    DateFileManage struct {
+        sync.Mutex
+        filePath       string
+        logWriteFile   *os.File
+        prevCutTime    time.Time
+        cutIntervalDay int
+        keepCnt        int // 保留日志个数
+        fileNameFormat Format
+    }
 
-	DateOption func(*DateFileManage)
+    DateOption func(*DateFileManage)
 )
 
 // NewDateCutMode 创建文件日期管理器, 默认1天1切
 func NewDateCutMode(filePath string, options ...FileManageOptions) *DateFileManage {
-	opt := FileManageOption{
-		cutIntervalDay: 1,
-		keepCnt:        10,
-		fileNameFormat: Date,
-	}
+    opt := FileManageOption{
+        cutIntervalDay: 1,
+        keepCnt:        10,
+        fileNameFormat: Date,
+    }
 
-	for _, o := range options {
-		o(&opt)
-	}
+    for _, o := range options {
+        o(&opt)
+    }
 
-	dateFileManage := &DateFileManage{
-		prevCutTime:    time.Now(),
-		cutIntervalDay: opt.cutIntervalDay,
-		filePath:       filePath,
-		keepCnt:        opt.keepCnt,
-		fileNameFormat: opt.fileNameFormat,
-	}
+    dateFileManage := &DateFileManage{
+        prevCutTime:    time.Now(),
+        cutIntervalDay: opt.cutIntervalDay,
+        filePath:       filePath,
+        keepCnt:        opt.keepCnt,
+        fileNameFormat: opt.fileNameFormat,
+    }
 
-	return dateFileManage
+    return dateFileManage
 }
 
 func (d *DateFileManage) FilePath() string {
-	return d.filePath
+    return d.filePath
 }
 
 func (d *DateFileManage) GetFile() *os.File {
-	d.Lock()
-	defer d.Unlock()
-	if d.logWriteFile == nil {
-		d.logWriteFile = mustCreateLogFile(d.filePath, d.fileNameFormat)
-	}
-	return d.logWriteFile
+    d.Lock()
+    defer d.Unlock()
+    if d.logWriteFile == nil {
+        d.logWriteFile = mustCreateLogFile(d.filePath, d.fileNameFormat)
+    }
+    return d.logWriteFile
 }
 
 func (d *DateFileManage) Close() error {
-	if d.logWriteFile != nil {
-		return d.logWriteFile.Close()
-	}
-	return nil
+    if d.logWriteFile != nil {
+        return d.logWriteFile.Close()
+    }
+    return nil
 }
 
 func (d *DateFileManage) IsCut(f SetOutput) error {
-	if d.cutIntervalDay == 0 {
-		return nil
-	}
-	now := time.Now()
-	year, month, day := now.Date()
-	prevYear, prevMonth, prevDay := d.prevCutTime.Date()
-	if day-prevDay >= d.cutIntervalDay || month != prevMonth || year != prevYear {
-		d.Lock()
-		defer d.Unlock()
-		prevYear, prevMonth, prevDay := d.prevCutTime.Date()
-		if day-prevDay >= d.cutIntervalDay || year != prevYear || month != prevMonth {
-			// _ = d.Close()
-			// _ = Rename(d.filePath)
+    if d.cutIntervalDay == 0 {
+        return nil
+    }
+    now := time.Now()
+    year, month, day := now.Date()
+    prevYear, prevMonth, prevDay := d.prevCutTime.Date()
+    if day-prevDay >= d.cutIntervalDay || month != prevMonth || year != prevYear {
+        d.Lock()
+        defer d.Unlock()
+        prevYear, prevMonth, prevDay := d.prevCutTime.Date()
+        if day-prevDay >= d.cutIntervalDay || year != prevYear || month != prevMonth {
+            // _ = d.Close()
+            // _ = Rename(d.filePath)
 
-			writer, err := createLogFile(d.filePath, d.fileNameFormat)
-			if err != nil {
-				return err
-			}
+            writer, err := createLogFile(d.filePath, d.fileNameFormat)
+            if err != nil {
+                return err
+            }
 
-			_ = d.Close()
-			d.logWriteFile = writer
-			d.prevCutTime = now
+            _ = d.Close()
+            d.logWriteFile = writer
+            d.prevCutTime = now
 			f(writer)
 			CleanHisLog(d.filePath, d.keepCnt)
 		}
-	}
-	return nil
+    }
+    return nil
 }

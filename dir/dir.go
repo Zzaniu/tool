@@ -31,34 +31,34 @@ Desc   :
 package dir
 
 import (
-	"io/fs"
-	"os"
+    "io/fs"
+    "os"
 )
 
 // HasDir 判断文件夹是否存在
 func HasDir(path string) (bool, error) {
-	_, _err := os.Stat(path)
-	if _err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(_err) {
-		return false, nil
-	}
-	return false, _err
+    _, _err := os.Stat(path)
+    if _err == nil {
+        return true, nil
+    }
+    if os.IsNotExist(_err) {
+        return false, nil
+    }
+    return false, _err
 }
 
 // MkdirAll 创建路径
 func MkdirAll(dir string, perm fs.FileMode) (err error) {
-	var ok bool
-	ok, err = HasDir(dir)
-	if err != nil {
-		return
-	}
-	if !ok {
-		err = os.MkdirAll(dir, perm)
-		if err != nil {
+    var ok bool
+    ok, err = HasDir(dir)
+    if err != nil {
+        return
+    }
+    if !ok {
+        err = os.MkdirAll(dir, perm)
+        if err != nil {
 			return
 		}
-	}
-	return
+    }
+    return
 }
