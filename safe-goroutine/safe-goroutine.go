@@ -111,12 +111,14 @@ func (s *safeGoroutine) Do() {
         s.WaitGroup.Add(1)
         go func(t task) {
             defer s.WaitGroup.Done()
+            var err error
             select {
             case <-s.ctx.Done():
-            case err := <-t.Done(s.ctx):
-                if err != nil {
-                    s.ch <- err
-                }
+                err = s.ctx.Err()
+            case err = <-t.Done(s.ctx):
+            }
+            if err != nil {
+                s.ch <- err
             }
         }(t)
     }
