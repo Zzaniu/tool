@@ -46,7 +46,7 @@ func TestSafeGoroutine(t *testing.T) {
         fmt.Println("task 1")
         return nil
     }, func() error {
-        time.Sleep(time.Second * 2)
+        time.Sleep(time.Second * 1)
         fmt.Println("task 2")
         return nil
     }, func() error {
@@ -59,3 +59,5 @@ func TestSafeGoroutine(t *testing.T) {
         panic(err)
     }
 }
+
+// go test .
