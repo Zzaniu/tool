@@ -41,6 +41,7 @@ type (
         Add(...func() error) // 添加任务
         Do()                 // 异步执行任务
         Wait() error         // 等待所有任务执行的结果, 如果发生错误, 返回第一个错误后直接结束, 不会再等待所有任务完成
+        DoAndWait() error
     }
     safeGoroutine struct {
         sync.WaitGroup
