@@ -38,7 +38,7 @@ import (
 )
 
 func TestSafeGoroutine(t *testing.T) {
-    ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second)
+    ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*3)
     defer cancelFunc()
     s := NewSafeGoroutine(ctx)
     s.Add(func() error {
@@ -54,6 +54,15 @@ func TestSafeGoroutine(t *testing.T) {
         // return fmt.Errorf("tsak3 error")
         return nil
     })
+    s.Do()
+    if err := s.Wait(); err != nil {
+        panic(err)
+    }
+}
+
+func TestSafeGoroutine2(t *testing.T) {
+    s := NewSafeGoroutine(context.Background())
+    s.Add()
     s.Do()
     if err := s.Wait(); err != nil {
         panic(err)
