@@ -141,6 +141,11 @@ func (s *safeGoroutine) Wait() (err error) {
     return
 }
 
+func (s *safeGoroutine) DoAndWait() error {
+    s.Do()
+    return s.Wait()
+}
+
 func NewSafeGoroutine(ctx context.Context) SafeGoroutine {
     cancelCtx, cancelFunc := context.WithCancel(ctx)
     return &safeGoroutine{ctx: cancelCtx, cancelFunc: cancelFunc}
