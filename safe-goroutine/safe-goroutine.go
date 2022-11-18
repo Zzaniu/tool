@@ -99,6 +99,8 @@ func (s *safeGoroutine) Add(fn ...func() error) {
     }
 }
 
+// Do 执行任务
+// TODO 考虑限制一下 goroutine 的数量
 func (s *safeGoroutine) Do() {
     if s.flg&isAdd != isAdd {
         panic(noTaskErr)
