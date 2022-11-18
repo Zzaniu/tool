@@ -119,13 +119,14 @@ func (s *safeGoroutine) Do() {
             case err = <-t.Done(s.ctx):
             }
             if err != nil {
-                s.ch <- err
+                s.ch <- err // 1 这里跟下面的接收 2, 没有任何 happens before 关系
             }
         }(t)
     }
 }
 
 func (s *safeGoroutine) Wait() (err error) {
+    waitCh := make(chan struct{})
     if s.flg&isRan != isRan {
         panic(noRunErr)
     }
@@ -134,11 +135,13 @@ func (s *safeGoroutine) Wait() (err error) {
     }
     s.flg = s.flg | isDone
     go func() {
-        err = <-s.ch
+        err = <-s.ch // 2 这里跟上面的发送 1, 没有任何 happens before 关系
         s.cancelFunc()
+        waitCh <- struct{}{}
     }()
     s.WaitGroup.Wait()
     close(s.ch)
+    <-waitCh
     return
 }
 
