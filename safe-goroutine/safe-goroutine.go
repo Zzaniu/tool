@@ -126,7 +126,6 @@ func (s *safeGoroutine) Do() {
 }
 
 func (s *safeGoroutine) Wait() (err error) {
-    waitCh := make(chan struct{})
     if s.flg&isRan != isRan {
         panic(noRunErr)
     }
@@ -134,6 +133,7 @@ func (s *safeGoroutine) Wait() (err error) {
         panic(onceErr)
     }
     s.flg = s.flg | isDone
+    waitCh := make(chan struct{})
     go func() {
         err = <-s.ch // 2 这里跟上面的发送 1, 没有任何 happens before 关系
         s.cancelFunc()
