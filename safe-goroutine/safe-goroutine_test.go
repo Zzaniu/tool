@@ -117,3 +117,4 @@ func TestSafeGoroutine4(t *testing.T) {
 }
 
 // go test .
+// go test -v -run TestSafeGoroutine4 .
