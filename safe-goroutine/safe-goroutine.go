@@ -45,16 +45,22 @@ type (
     }
     safeGoroutine struct {
         sync.WaitGroup
-        task       []task
-        ctx        context.Context
-        cancelFunc context.CancelFunc
-        ch         chan error
-        flg        int8
+        task         []task
+        ctx          context.Context
+        cancelFunc   context.CancelFunc
+        goroutineNum int
+        ch           chan error
+        flg          int8
     }
     task struct {
         fn func() error
         ch chan error
     }
+)
+
+const (
+    defaultGoroutineNum = 10
+    maxGoroutineNum     = 500
 )
 
 const (
@@ -75,12 +81,12 @@ func (t *task) Done(ctx context.Context) <-chan error {
             if e := recover(); e != nil {
                 t.ch <- fmt.Errorf("%v", e)
             }
+            close(t.ch)
         }()
         select {
         case <-ctx.Done():
-            close(t.ch)
         default:
-            t.ch <- t.fn()
+            t.ch <- t.fn() // 把结果写入 t.ch
         }
     }()
     return t.ch
@@ -100,7 +106,6 @@ func (s *safeGoroutine) Add(fn ...func() error) {
 }
 
 // Do 执行任务
-// TODO 考虑限制一下 goroutine 的数量
 func (s *safeGoroutine) Do() {
     if s.flg&isAdd != isAdd {
         panic(noTaskErr)
@@ -110,6 +115,14 @@ func (s *safeGoroutine) Do() {
     }
     s.flg = s.flg | isRan
     s.ch = make(chan error, len(s.task))
+    if len(s.task) <= s.goroutineNum {
+        s.do()
+    } else {
+        s.do2()
+    }
+}
+
+func (s *safeGoroutine) do() {
     for _, t := range s.task {
         s.WaitGroup.Add(1)
         go func(t task) {
@@ -124,6 +137,55 @@ func (s *safeGoroutine) Do() {
                 s.ch <- err // 1 这里跟下面的接收 2, 没有任何 happens before 关系
             }
         }(t)
+    }
+}
+
+func (s *safeGoroutine) do2() {
+    taskCh := make(chan task)
+    go func() { // 发送任务
+        for _, v := range s.task {
+            select {
+            case <-s.ctx.Done():
+                return
+            case taskCh <- v:
+            }
+        }
+        close(taskCh) // 任务发送完毕, 关闭 chan
+    }()
+
+    for i := 0; i < s.goroutineNum; i++ {
+        s.WaitGroup.Add(1)
+        go func() {
+            defer s.WaitGroup.Done()
+            var (
+                err error
+                t   task
+                ok  bool
+            )
+            for {
+                select { // 分发任务的时候就有可能被取消掉了
+                case <-s.ctx.Done(): // 取消了
+                    err = s.ctx.Err()
+                case t, ok = <-taskCh:
+                }
+                if err != nil { // 取消了
+                    s.ch <- err
+                    return
+                }
+                if !ok { // 结束了
+                    return
+                }
+                select {
+                case <-s.ctx.Done(): // 取消了
+                    err = s.ctx.Err()
+                case err = <-t.Done(s.ctx):
+                }
+                if err != nil { // 取消了或者任务有报错
+                    s.ch <- err
+                    return
+                }
+            }
+        }()
     }
 }
 
@@ -152,7 +214,18 @@ func (s *safeGoroutine) DoAndWait() error {
     return s.Wait()
 }
 
+// NewSafeGoroutine new 一个最大 10 个 task 并发执行的 SafeGoroutine
 func NewSafeGoroutine(ctx context.Context) SafeGoroutine {
+    return NewSafeGoroutineWithTaskNum(ctx, defaultGoroutineNum)
+}
+
+// NewSafeGoroutineWithTaskNum new 一个最大 taskNum 个 task 并发执行的 SafeGoroutine
+func NewSafeGoroutineWithTaskNum(ctx context.Context, taskNum int) SafeGoroutine {
+    if taskNum <= 0 {
+        taskNum = defaultGoroutineNum
+    } else if taskNum > maxGoroutineNum {
+        taskNum = maxGoroutineNum
+    }
     cancelCtx, cancelFunc := context.WithCancel(ctx)
-    return &safeGoroutine{ctx: cancelCtx, cancelFunc: cancelFunc}
+    return &safeGoroutine{ctx: cancelCtx, cancelFunc: cancelFunc, goroutineNum: taskNum}
 }

@@ -92,4 +92,28 @@ func TestSafeGoroutine3(t *testing.T) {
     }
 }
 
+func TestSafeGoroutine4(t *testing.T) {
+    for i := 0; i < 1000; i++ {
+        s := NewSafeGoroutineWithTaskNum(context.Background(), 3)
+        s.Add(func() error {
+            time.Sleep(time.Millisecond * 1)
+            fmt.Println("task 1")
+            return nil
+        }, func() error {
+            time.Sleep(time.Millisecond * 1)
+            fmt.Println("task 2")
+            return nil
+        }, func() error {
+            time.Sleep(time.Millisecond * 1)
+            fmt.Println("haha")
+            return fmt.Errorf("tsak3 error")
+            // return nil
+        })
+        err := s.DoAndWait()
+        if err == nil {
+            t.Error("程序错误")
+        }
+    }
+}
+
 // go test .
