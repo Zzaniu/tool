@@ -169,7 +169,7 @@ func (s *safeGoroutine) do2() {
                 case t, ok = <-taskCh:
                 }
                 if err != nil { // 取消了
-                    s.ch <- err
+                    s.ch <- err // 1 这里跟下面的接收 2, 没有任何 happens before 关系
                     return
                 }
                 if !ok { // 结束了
@@ -181,7 +181,7 @@ func (s *safeGoroutine) do2() {
                 case err = <-t.Done(s.ctx):
                 }
                 if err != nil { // 取消了或者任务有报错
-                    s.ch <- err
+                    s.ch <- err // 1 这里跟下面的接收 2, 没有任何 happens before 关系
                     return
                 }
             }
