@@ -50,9 +50,9 @@ func TestSafeGoroutine(t *testing.T) {
 		fmt.Println("task 2")
 		return nil
 	}, func() error {
-		time.Sleep(time.Millisecond * 100)
-		//return fmt.Errorf("tsak3 error")
-		return nil
+		//time.Sleep(time.Millisecond * 100)
+		return fmt.Errorf("tsak3 error")
+		//return nil
 	})
 	s.Do()
 	if err := s.Wait(); err != nil {
