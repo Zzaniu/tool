@@ -100,7 +100,7 @@ func (s *SyncSet[T]) String() string {
         return "nil"
     }
     var buf bytes.Buffer
-    buf.WriteString("SyncStrSet{")
+    buf.WriteString("SyncSet{")
     flag := true
     for k := range s.m {
         if flag {

@@ -61,7 +61,7 @@ func (s *Set[T]) Elements() []T {
 
 func (s *Set[T]) String() string {
     var buf bytes.Buffer
-    buf.WriteString("StrSet{")
+    buf.WriteString("Set{")
     flag := true
     for k := range s.m {
         if flag {
