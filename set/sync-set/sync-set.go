@@ -192,7 +192,7 @@ func (s *SyncSet[T]) Difference(otherSet *SyncSet[T]) *SyncSet[T] {
     return diffSet
 }
 
-// Union 并集. 不保证 other 并发安全
+// Union 并集
 func (s *SyncSet[T]) Union(otherSet *SyncSet[T]) *SyncSet[T] {
     s.RLock()
     defer s.RUnlock()
