@@ -16,3 +16,18 @@ type Set interface {
     Difference(Set) Set // 差集
     Union(Set) Set      // 并集
 }
+
+type ISet[T comparable] interface {
+    Contains(T) bool
+    Add(T) bool
+    Remove(T)
+    Len() int
+    IsEmpty() bool
+    Clear()
+    Elements() []T
+    String() string
+    Same(ISet[T]) bool          // 是否相同, 指所包含的元素是否都一致
+    Intersect(ISet[T]) ISet[T]  // 交集
+    Difference(ISet[T]) ISet[T] // 差集
+    Union(ISet[T]) ISet[T]      // 并集
+}
