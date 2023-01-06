@@ -11,6 +11,7 @@ var (
 )
 
 // strSet 不保证并发安全
+// Deprecated: 将丢弃, 请使用 set.Set
 type strSet map[string]struct{}
 
 // Contains 是否包含元素
@@ -142,14 +143,17 @@ func (s *strSet) Intersect(other set.Set) set.Set {
 }
 
 // NewFromStrSlice 从切片生成
+// Deprecated: 将丢弃, 请使用 set.NewFromSlice
 func NewFromStrSlice(strSlice []string) *strSet {
     ret := make(strSet)
     for index := range strSlice {
-		ret.add(strSlice[index])
+        ret.add(strSlice[index])
     }
     return &ret
 }
 
+// NewStrSet 生成
+// Deprecated: 将丢弃, 请使用 set.NewSet
 func NewStrSet() *strSet {
     ret := make(strSet)
     return &ret

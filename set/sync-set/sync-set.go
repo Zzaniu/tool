@@ -1,26 +1,24 @@
-package sync_str_set
+package sync_set
 
 import (
     "bytes"
     "fmt"
-    "github.com/Zzaniu/tool/set"
     "sync"
 )
 
-// syncStrSet 保证并发安全
-// Deprecated: 将丢弃, 请使用 sync_set.SyncSet
-type syncStrSet struct {
+// SyncSet 保证并发安全
+type SyncSet[T comparable] struct {
     sync.RWMutex
-    m map[string]struct{}
+    m map[T]struct{}
 }
 
-func (s *syncStrSet) Contains(key string) bool {
+func (s *SyncSet[T]) Contains(key T) bool {
     s.RLock()
     defer s.RUnlock()
     return s.contains(key)
 }
 
-func (s *syncStrSet) contains(key string) bool {
+func (s *SyncSet[T]) contains(key T) bool {
     if s == nil {
         return false
     }
@@ -28,7 +26,7 @@ func (s *syncStrSet) contains(key string) bool {
     return exists
 }
 
-func (s *syncStrSet) Add(key string) bool {
+func (s *SyncSet[T]) Add(key T) bool {
     if s.Contains(key) {
         return false
     }
@@ -41,7 +39,7 @@ func (s *syncStrSet) Add(key string) bool {
     return true
 }
 
-func (s *syncStrSet) Remove(key string) {
+func (s *SyncSet[T]) Remove(key T) {
     if !s.Contains(key) {
         return
     }
@@ -51,7 +49,7 @@ func (s *syncStrSet) Remove(key string) {
     delete(s.m, key)
 }
 
-func (s *syncStrSet) Len() int {
+func (s *SyncSet[T]) Len() int {
     s.RLock()
     defer s.RUnlock()
     if s == nil {
@@ -60,42 +58,42 @@ func (s *syncStrSet) Len() int {
     return len(s.m)
 }
 
-func (s *syncStrSet) IsEmpty() bool {
+func (s *SyncSet[T]) IsEmpty() bool {
     s.RLock()
     defer s.RUnlock()
     return s.isEmpty()
 }
 
-func (s *syncStrSet) isEmpty() bool {
+func (s *SyncSet[T]) isEmpty() bool {
     if s == nil {
         return true
     }
     return len(s.m) == 0
 }
 
-func (s *syncStrSet) Clear() {
+func (s *SyncSet[T]) Clear() {
     s.Lock()
     defer s.Unlock()
     if s.isEmpty() {
         return
     }
-    s.m = make(map[string]struct{})
+    s.m = make(map[T]struct{})
 }
 
-func (s *syncStrSet) Elements() []string {
+func (s *SyncSet[T]) Elements() []T {
     s.RLock()
     defer s.RUnlock()
     if s.isEmpty() {
-        return []string{}
+        return []T{}
     }
-    snapshot := make([]string, 0, len(s.m))
+    snapshot := make([]T, 0, len(s.m))
     for key := range s.m {
         snapshot = append(snapshot, key)
     }
     return snapshot
 }
 
-func (s *syncStrSet) String() string {
+func (s *SyncSet[T]) String() string {
     s.RLock()
     defer s.RUnlock()
     if s == nil {
@@ -116,16 +114,12 @@ func (s *syncStrSet) String() string {
     return buf.String()
 }
 
-func (s *syncStrSet) rawContainer() map[string]struct{} {
+func (s *SyncSet[T]) rawContainer() map[T]struct{} {
     return s.m
 }
 
 // Same 是否相同, 指所包含的元素是否都一致.
-func (s *syncStrSet) Same(other set.Set) bool {
-    otherSet, ok := other.(*syncStrSet)
-    if !ok {
-        panic("should be *syncStrSet")
-    }
+func (s *SyncSet[T]) Same(otherSet *SyncSet[T]) bool {
     s.RLock()
     defer s.RUnlock()
     otherSet.RLock()
@@ -147,20 +141,16 @@ func (s *syncStrSet) Same(other set.Set) bool {
 }
 
 // Intersect 交集.
-func (s *syncStrSet) Intersect(other set.Set) set.Set {
-    otherSet, ok := other.(*syncStrSet)
-    if !ok {
-        panic("should be *syncStrSet")
-    }
+func (s *SyncSet[T]) Intersect(otherSet *SyncSet[T]) *SyncSet[T] {
     s.RLock()
     defer s.RUnlock()
     otherSet.RLock()
     defer otherSet.RUnlock()
 
     if s == nil || len(s.m) == 0 || otherSet == nil || len(otherSet.m) == 0 {
-        return NewSyncStrSet()
+        return NewSyncSet[T]()
     }
-    intersectSet := NewSyncStrSet()
+    intersectSet := NewSyncSet[T]()
     if len(s.m) > len(otherSet.m) {
         for key := range otherSet.m {
             if s.contains(key) {
@@ -178,17 +168,13 @@ func (s *syncStrSet) Intersect(other set.Set) set.Set {
 }
 
 // Difference 差集.
-func (s *syncStrSet) Difference(other set.Set) set.Set {
-    otherSet, ok := other.(*syncStrSet)
-    if !ok {
-        panic("should be *syncStrSet")
-    }
+func (s *SyncSet[T]) Difference(otherSet *SyncSet[T]) *SyncSet[T] {
     s.RLock()
     defer s.RUnlock()
     otherSet.RLock()
     defer otherSet.RUnlock()
 
-    diffSet := NewSyncStrSet()
+    diffSet := NewSyncSet[T]()
     if s == nil || len(s.m) == 0 {
         return diffSet
     }
@@ -207,17 +193,13 @@ func (s *syncStrSet) Difference(other set.Set) set.Set {
 }
 
 // Union 并集. 不保证 other 并发安全
-func (s *syncStrSet) Union(other set.Set) set.Set {
-    otherSet, ok := other.(*syncStrSet)
-    if !ok {
-        panic("should be *syncStrSet")
-    }
+func (s *SyncSet[T]) Union(otherSet *SyncSet[T]) *SyncSet[T] {
     s.RLock()
     defer s.RUnlock()
     otherSet.RLock()
     defer otherSet.RUnlock()
 
-    union := NewSyncStrSet()
+    union := NewSyncSet[T]()
     if s != nil && len(s.m) > 0 {
         for key := range s.m {
             union.m[key] = struct{}{}
@@ -232,17 +214,15 @@ func (s *syncStrSet) Union(other set.Set) set.Set {
     return union
 }
 
-// NewFromStrSlice 从切片生成
-// Deprecated: 将丢弃, 请使用 sync_set.NewFromSlice
-func NewFromStrSlice(strSlice []string) *syncStrSet {
-    ret := &syncStrSet{m: make(map[string]struct{})}
-    for index := range strSlice {
-        ret.Add(strSlice[index])
+// NewFromSlice 从切片生成
+func NewFromSlice[T comparable](slice []T) *SyncSet[T] {
+    ret := &SyncSet[T]{m: make(map[T]struct{})}
+    for index := range slice {
+        ret.Add(slice[index])
     }
     return ret
 }
 
-// Deprecated: 将丢弃, 请使用 sync_set.NewSyncSet
-func NewSyncStrSet() *syncStrSet {
-    return &syncStrSet{m: make(map[string]struct{})}
+func NewSyncSet[T comparable]() *SyncSet[T] {
+    return &SyncSet[T]{m: make(map[T]struct{})}
 }

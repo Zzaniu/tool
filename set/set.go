@@ -1,5 +1,7 @@
 package set
 
+// Set
+// Deprecated: 将丢弃, 请直接使用 set.Set 和 sync_set.SyncSet
 type Set interface {
     Contains(string) bool
     Add(string) bool
