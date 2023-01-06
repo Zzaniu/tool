@@ -138,8 +138,8 @@ func (s *Set[T]) Union(other *Set[T]) *Set[T] {
     return union
 }
 
-// NewFromStrSlice 从切片生成
-func NewFromStrSlice[T comparable](slice []T) *Set[T] {
+// NewFromSlice 从切片生成
+func NewFromSlice[T comparable](slice []T) *Set[T] {
     ret := &Set[T]{m: make(map[T]struct{}, len(slice))}
     for index := range slice {
         ret.add(slice[index])

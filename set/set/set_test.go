@@ -38,8 +38,8 @@ import (
 func TestSet(t *testing.T) {
     x1 := []string{"1", "2", "4"}
     x2 := []string{"1", "2", "5"}
-    s1 := NewFromStrSlice[string](x1)
-    s2 := NewFromStrSlice[string](x2)
+    s1 := NewFromSlice[string](x1)
+    s2 := NewFromSlice[string](x2)
 
     fmt.Println("s1.Same(s2) = ", s1.Same(s2))
     fmt.Println("s1.Difference(s2).String() = ", s1.Difference(s2).String())
