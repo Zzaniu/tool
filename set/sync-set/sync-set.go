@@ -93,12 +93,15 @@ func (s *SyncSet[T]) Elements() []T {
     return snapshot
 }
 
-func (s *SyncSet[T]) Iter(fn func(key T)) {
+func (s *SyncSet[T]) Iter(fn func(key T) error) error {
     s.RLock()
     defer s.RUnlock()
     for key := range s.m {
-        fn(key)
+        if err := fn(key); err != nil {
+            return err
+        }
     }
+    return nil
 }
 
 func (s *SyncSet[T]) String() string {

@@ -64,10 +64,13 @@ func (s *set[T]) Elements() []T {
     return ret
 }
 
-func (s *set[T]) Iter(fn func(key T)) {
+func (s *set[T]) Iter(fn func(key T) error) error {
     for key := range s.m {
-        fn(key)
+        if err := fn(key); err != nil {
+            return err
+        }
     }
+    return nil
 }
 
 func (s *set[T]) String() string {
