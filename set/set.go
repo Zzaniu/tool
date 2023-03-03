@@ -25,6 +25,7 @@ type ISet[T comparable] interface {
     IsEmpty() bool
     Clear()
     Elements() []T
+    Iter(func(key T))
     String() string
     Same(ISet[T]) bool          // 是否相同, 指所包含的元素是否都一致
     Intersect(ISet[T]) ISet[T]  // 交集

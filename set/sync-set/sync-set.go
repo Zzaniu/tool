@@ -93,6 +93,14 @@ func (s *SyncSet[T]) Elements() []T {
     return snapshot
 }
 
+func (s *SyncSet[T]) Iter(fn func(key T)) {
+    s.RLock()
+    defer s.RUnlock()
+    for key := range s.m {
+        fn(key)
+    }
+}
+
 func (s *SyncSet[T]) String() string {
     s.RLock()
     defer s.RUnlock()

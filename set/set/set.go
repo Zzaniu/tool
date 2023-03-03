@@ -59,6 +59,12 @@ func (s *Set[T]) Elements() []T {
     return ret
 }
 
+func (s *Set[T]) Iter(fn func(key T)) {
+    for key := range s.m {
+        fn(key)
+    }
+}
+
 func (s *Set[T]) String() string {
     var buf bytes.Buffer
     buf.WriteString("Set{")
