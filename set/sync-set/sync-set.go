@@ -9,7 +9,7 @@ import (
 // SyncSet 保证并发安全
 type SyncSet[T comparable] struct {
     sync.RWMutex
-    m map[T]struct{}
+    M map[T]struct{}
 }
 
 func (s *SyncSet[T]) Contains(key T) bool {
@@ -22,7 +22,7 @@ func (s *SyncSet[T]) contains(key T) bool {
     if s == nil {
         return false
     }
-    _, exists := s.m[key]
+    _, exists := s.M[key]
     return exists
 }
 
@@ -32,10 +32,10 @@ func (s *SyncSet[T]) Add(key T) bool {
     }
     s.Lock()
     defer s.Unlock()
-    if _, exists := s.m[key]; exists {
+    if _, exists := s.M[key]; exists {
         return false
     }
-    s.m[key] = struct{}{}
+    s.M[key] = struct{}{}
     return true
 }
 
@@ -46,7 +46,7 @@ func (s *SyncSet[T]) Remove(key T) {
     s.Lock()
     defer s.Unlock()
     // 如果key不存在，为空操作，所以这里不再判断也没关系
-    delete(s.m, key)
+    delete(s.M, key)
 }
 
 func (s *SyncSet[T]) Len() int {
@@ -55,7 +55,7 @@ func (s *SyncSet[T]) Len() int {
     if s == nil {
         return 0
     }
-    return len(s.m)
+    return len(s.M)
 }
 
 func (s *SyncSet[T]) IsEmpty() bool {
@@ -68,7 +68,7 @@ func (s *SyncSet[T]) isEmpty() bool {
     if s == nil {
         return true
     }
-    return len(s.m) == 0
+    return len(s.M) == 0
 }
 
 func (s *SyncSet[T]) Clear() {
@@ -77,7 +77,7 @@ func (s *SyncSet[T]) Clear() {
     if s.isEmpty() {
         return
     }
-    s.m = make(map[T]struct{})
+    s.M = make(map[T]struct{})
 }
 
 func (s *SyncSet[T]) Elements() []T {
@@ -86,8 +86,8 @@ func (s *SyncSet[T]) Elements() []T {
     if s.isEmpty() {
         return []T{}
     }
-    snapshot := make([]T, 0, len(s.m))
-    for key := range s.m {
+    snapshot := make([]T, 0, len(s.M))
+    for key := range s.M {
         snapshot = append(snapshot, key)
     }
     return snapshot
@@ -96,7 +96,7 @@ func (s *SyncSet[T]) Elements() []T {
 func (s *SyncSet[T]) Iter(fn func(key T) error) error {
     s.RLock()
     defer s.RUnlock()
-    for key := range s.m {
+    for key := range s.M {
         if err := fn(key); err != nil {
             return err
         }
@@ -113,7 +113,7 @@ func (s *SyncSet[T]) String() string {
     var buf bytes.Buffer
     buf.WriteString("SyncSet{")
     flag := true
-    for k := range s.m {
+    for k := range s.M {
         if flag {
             flag = false
         } else {
@@ -126,7 +126,7 @@ func (s *SyncSet[T]) String() string {
 }
 
 func (s *SyncSet[T]) rawContainer() map[T]struct{} {
-    return s.m
+    return s.M
 }
 
 // Same 是否相同, 指所包含的元素是否都一致.
@@ -139,12 +139,12 @@ func (s *SyncSet[T]) Same(otherSet *SyncSet[T]) bool {
     if s == nil || otherSet == nil {
         return false
     }
-    otherLength := len(otherSet.m)
-    if otherLength == 0 || len(s.m) != otherLength {
+    otherLength := len(otherSet.M)
+    if otherLength == 0 || len(s.M) != otherLength {
         return false
     }
-    for key := range s.m {
-        if _, exists := otherSet.m[key]; !exists {
+    for key := range s.M {
+        if _, exists := otherSet.M[key]; !exists {
             return false
         }
     }
@@ -158,20 +158,20 @@ func (s *SyncSet[T]) Intersect(otherSet *SyncSet[T]) *SyncSet[T] {
     otherSet.RLock()
     defer otherSet.RUnlock()
 
-    if s == nil || len(s.m) == 0 || otherSet == nil || len(otherSet.m) == 0 {
+    if s == nil || len(s.M) == 0 || otherSet == nil || len(otherSet.M) == 0 {
         return NewSyncSet[T]()
     }
     intersectSet := NewSyncSet[T]()
-    if len(s.m) > len(otherSet.m) {
-        for key := range otherSet.m {
+    if len(s.M) > len(otherSet.M) {
+        for key := range otherSet.M {
             if s.contains(key) {
-                intersectSet.m[key] = struct{}{}
+                intersectSet.M[key] = struct{}{}
             }
         }
     } else {
-        for key := range s.m {
+        for key := range s.M {
             if otherSet.contains(key) {
-                intersectSet.m[key] = struct{}{}
+                intersectSet.M[key] = struct{}{}
             }
         }
     }
@@ -186,17 +186,17 @@ func (s *SyncSet[T]) Difference(otherSet *SyncSet[T]) *SyncSet[T] {
     defer otherSet.RUnlock()
 
     diffSet := NewSyncSet[T]()
-    if s == nil || len(s.m) == 0 {
+    if s == nil || len(s.M) == 0 {
         return diffSet
     }
-    if otherSet == nil || len(otherSet.m) == 0 {
-        for key := range s.m {
-            diffSet.m[key] = struct{}{}
+    if otherSet == nil || len(otherSet.M) == 0 {
+        for key := range s.M {
+            diffSet.M[key] = struct{}{}
         }
     } else {
-        for key := range s.m {
+        for key := range s.M {
             if !otherSet.contains(key) {
-                diffSet.m[key] = struct{}{}
+                diffSet.M[key] = struct{}{}
             }
         }
     }
@@ -211,15 +211,15 @@ func (s *SyncSet[T]) Union(otherSet *SyncSet[T]) *SyncSet[T] {
     defer otherSet.RUnlock()
 
     union := NewSyncSet[T]()
-    if s != nil && len(s.m) > 0 {
-        for key := range s.m {
-            union.m[key] = struct{}{}
+    if s != nil && len(s.M) > 0 {
+        for key := range s.M {
+            union.M[key] = struct{}{}
         }
     }
 
-    if otherSet != nil && len(otherSet.m) > 0 {
-        for key := range otherSet.m {
-            union.m[key] = struct{}{}
+    if otherSet != nil && len(otherSet.M) > 0 {
+        for key := range otherSet.M {
+            union.M[key] = struct{}{}
         }
     }
     return union
@@ -227,7 +227,7 @@ func (s *SyncSet[T]) Union(otherSet *SyncSet[T]) *SyncSet[T] {
 
 // NewFromSlice 从切片生成
 func NewFromSlice[T comparable](slice []T) *SyncSet[T] {
-    ret := &SyncSet[T]{m: make(map[T]struct{})}
+    ret := &SyncSet[T]{M: make(map[T]struct{})}
     for index := range slice {
         ret.Add(slice[index])
     }
@@ -235,5 +235,5 @@ func NewFromSlice[T comparable](slice []T) *SyncSet[T] {
 }
 
 func NewSyncSet[T comparable]() *SyncSet[T] {
-    return &SyncSet[T]{m: make(map[T]struct{})}
+    return &SyncSet[T]{M: make(map[T]struct{})}
 }

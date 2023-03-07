@@ -7,12 +7,12 @@ import (
 
 // Set 不保证并发安全
 type Set[T comparable] struct {
-    m map[T]struct{}
+    M map[T]struct{}
 }
 
 // Contains 是否包含元素
 func (s *Set[T]) Contains(key T) bool {
-    _, exists := s.m[key]
+    _, exists := s.M[key]
     return exists
 }
 
@@ -21,23 +21,23 @@ func (s *Set[T]) Add(key T) bool {
     if s.Contains(key) {
         return false
     }
-    s.m[key] = struct{}{}
+    s.M[key] = struct{}{}
     return true
 }
 
 func (s *Set[T]) add(key T) {
-    s.m[key] = struct{}{}
+    s.M[key] = struct{}{}
 }
 
 // Remove 删除元素
 func (s *Set[T]) Remove(key T) {
     // 如果key不存在，为空操作
-    delete(s.m, key)
+    delete(s.M, key)
 }
 
 // Len 长度
 func (s *Set[T]) Len() int {
-    return len(s.m)
+    return len(s.M)
 }
 
 // IsEmpty 是否为空
@@ -47,20 +47,20 @@ func (s *Set[T]) IsEmpty() bool {
 
 // Clear 清空
 func (s *Set[T]) Clear() {
-    s.m = make(map[T]struct{})
+    s.M = make(map[T]struct{})
 }
 
 // Elements 所有元素
 func (s *Set[T]) Elements() []T {
     ret := make([]T, 0, s.Len())
-    for key := range s.m {
+    for key := range s.M {
         ret = append(ret, key)
     }
     return ret
 }
 
 func (s *Set[T]) Iter(fn func(key T) error) error {
-    for key := range s.m {
+    for key := range s.M {
         if err := fn(key); err != nil {
             return err
         }
@@ -72,7 +72,7 @@ func (s *Set[T]) String() string {
     var buf bytes.Buffer
     buf.WriteString("Set{")
     flag := true
-    for k := range s.m {
+    for k := range s.M {
         if flag {
             flag = false
         } else {
@@ -86,7 +86,7 @@ func (s *Set[T]) String() string {
 
 // Same 是否相同
 func (s *Set[T]) Same(other *Set[T]) bool {
-    if other == nil || other.m == nil {
+    if other == nil || other.M == nil {
         return false
     }
 
@@ -121,11 +121,11 @@ func (s *Set[T]) Intersect(other *Set[T]) *Set[T] {
 func (s *Set[T]) Difference(other *Set[T]) *Set[T] {
     diffSet := NewSet[T]()
     if other == nil || other.Len() == 0 {
-        for v := range s.m {
+        for v := range s.M {
             diffSet.add(v)
         }
     } else {
-        for v := range s.m {
+        for v := range s.M {
             if !other.Contains(v) {
                 diffSet.add(v)
             }
@@ -137,7 +137,7 @@ func (s *Set[T]) Difference(other *Set[T]) *Set[T] {
 // Union 并集
 func (s *Set[T]) Union(other *Set[T]) *Set[T] {
     union := NewSet[T]()
-    for v := range s.m {
+    for v := range s.M {
         union.add(v)
     }
     if other == nil {
@@ -152,7 +152,7 @@ func (s *Set[T]) Union(other *Set[T]) *Set[T] {
 
 // NewFromSlice 从切片生成
 func NewFromSlice[T comparable](slice []T) *Set[T] {
-    ret := &Set[T]{m: make(map[T]struct{}, len(slice))}
+    ret := &Set[T]{M: make(map[T]struct{}, len(slice))}
     for index := range slice {
         ret.add(slice[index])
     }
@@ -160,5 +160,5 @@ func NewFromSlice[T comparable](slice []T) *Set[T] {
 }
 
 func NewSet[T comparable]() *Set[T] {
-    return &Set[T]{m: make(map[T]struct{})}
+    return &Set[T]{M: make(map[T]struct{})}
 }
