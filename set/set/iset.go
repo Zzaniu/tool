@@ -7,65 +7,65 @@ import (
 )
 
 var (
-    _ iset.ISet[string] = &set[string]{}
+    _ iset.ISet[string] = &TSet[string]{}
 )
 
-// set 不保证并发安全
-type set[T comparable] struct {
-    m map[T]struct{}
+// TSet 不保证并发安全
+type TSet[T comparable] struct {
+    M map[T]struct{}
 }
 
 // Contains 是否包含元素
-func (s *set[T]) Contains(key T) bool {
-    _, exists := s.m[key]
+func (s *TSet[T]) Contains(key T) bool {
+    _, exists := s.M[key]
     return exists
 }
 
 // Add 添加元素
-func (s *set[T]) Add(key T) bool {
+func (s *TSet[T]) Add(key T) bool {
     if s.Contains(key) {
         return false
     }
-    s.m[key] = struct{}{}
+    s.M[key] = struct{}{}
     return true
 }
 
-func (s *set[T]) add(key T) {
-    s.m[key] = struct{}{}
+func (s *TSet[T]) add(key T) {
+    s.M[key] = struct{}{}
 }
 
 // Remove 删除元素
-func (s *set[T]) Remove(key T) {
+func (s *TSet[T]) Remove(key T) {
     // 如果key不存在，为空操作
-    delete(s.m, key)
+    delete(s.M, key)
 }
 
 // Len 长度
-func (s *set[T]) Len() int {
-    return len(s.m)
+func (s *TSet[T]) Len() int {
+    return len(s.M)
 }
 
 // IsEmpty 是否为空
-func (s *set[T]) IsEmpty() bool {
+func (s *TSet[T]) IsEmpty() bool {
     return s.Len() == 0
 }
 
 // Clear 清空
-func (s *set[T]) Clear() {
-    s.m = make(map[T]struct{})
+func (s *TSet[T]) Clear() {
+    s.M = make(map[T]struct{})
 }
 
 // Elements 所有元素
-func (s *set[T]) Elements() []T {
+func (s *TSet[T]) Elements() []T {
     ret := make([]T, 0, s.Len())
-    for key := range s.m {
+    for key := range s.M {
         ret = append(ret, key)
     }
     return ret
 }
 
-func (s *set[T]) Iter(fn func(key T) error) error {
-    for key := range s.m {
+func (s *TSet[T]) Iter(fn func(key T) error) error {
+    for key := range s.M {
         if err := fn(key); err != nil {
             return err
         }
@@ -73,11 +73,11 @@ func (s *set[T]) Iter(fn func(key T) error) error {
     return nil
 }
 
-func (s *set[T]) String() string {
+func (s *TSet[T]) String() string {
     var buf bytes.Buffer
-    buf.WriteString("set{")
+    buf.WriteString("TSet{")
     flag := true
-    for k := range s.m {
+    for k := range s.M {
         if flag {
             flag = false
         } else {
@@ -90,7 +90,7 @@ func (s *set[T]) String() string {
 }
 
 // Same 是否相同
-func (s *set[T]) Same(other iset.ISet[T]) bool {
+func (s *TSet[T]) Same(other iset.ISet[T]) bool {
     if other == nil {
         return false
     }
@@ -108,11 +108,11 @@ func (s *set[T]) Same(other iset.ISet[T]) bool {
 }
 
 // Intersect 交集
-func (s *set[T]) Intersect(other iset.ISet[T]) iset.ISet[T] {
+func (s *TSet[T]) Intersect(other iset.ISet[T]) iset.ISet[T] {
     if other == nil || other.Len() == 0 {
-        return newISet[T]()
+        return newTSet[T]()
     }
-    intersectSet := newISet[T]()
+    intersectSet := newTSet[T]()
     elements := other.Elements()
     for index := range elements {
         if s.Contains(elements[index]) {
@@ -123,14 +123,14 @@ func (s *set[T]) Intersect(other iset.ISet[T]) iset.ISet[T] {
 }
 
 // Difference 差集
-func (s *set[T]) Difference(other iset.ISet[T]) iset.ISet[T] {
-    diffSet := newISet[T]()
+func (s *TSet[T]) Difference(other iset.ISet[T]) iset.ISet[T] {
+    diffSet := newTSet[T]()
     if other == nil || other.Len() == 0 {
-        for v := range s.m {
+        for v := range s.M {
             diffSet.add(v)
         }
     } else {
-        for v := range s.m {
+        for v := range s.M {
             if !other.Contains(v) {
                 diffSet.add(v)
             }
@@ -140,9 +140,9 @@ func (s *set[T]) Difference(other iset.ISet[T]) iset.ISet[T] {
 }
 
 // Union 并集
-func (s *set[T]) Union(other iset.ISet[T]) iset.ISet[T] {
-    union := newISet[T]()
-    for v := range s.m {
+func (s *TSet[T]) Union(other iset.ISet[T]) iset.ISet[T] {
+    union := newTSet[T]()
+    for v := range s.M {
         union.add(v)
     }
     if other == nil {
@@ -155,13 +155,13 @@ func (s *set[T]) Union(other iset.ISet[T]) iset.ISet[T] {
     return union
 }
 
-func newISet[T comparable]() *set[T] {
-    return &set[T]{m: make(map[T]struct{})}
+func newTSet[T comparable]() *TSet[T] {
+    return &TSet[T]{M: make(map[T]struct{})}
 }
 
 // TNewFromSlice 从切片生成
 func TNewFromSlice[T comparable](slice []T) iset.ISet[T] {
-    ret := &set[T]{m: make(map[T]struct{}, len(slice))}
+    ret := &TSet[T]{M: make(map[T]struct{}, len(slice))}
     for index := range slice {
         ret.add(slice[index])
     }
@@ -169,5 +169,5 @@ func TNewFromSlice[T comparable](slice []T) iset.ISet[T] {
 }
 
 func TNewSet[T comparable]() iset.ISet[T] {
-    return newISet[T]()
+    return newTSet[T]()
 }
