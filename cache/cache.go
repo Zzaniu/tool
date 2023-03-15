@@ -1,6 +1,9 @@
 package cache
 
-import "time"
+import (
+    "context"
+    "time"
+)
 
 type (
     Option struct {
@@ -11,10 +14,10 @@ type (
     Opts func(*Option)
 
     Cache interface {
-        Get(string, func() (string, error), ...Opts) (string, error)
-        MGet(...string) ([]interface{}, error)
-        Del(string) (bool, error)
-        MDel(...string) ([]bool, error)
+        Get(context.Context, string, func() (string, error), ...Opts) (string, error)
+        MGet(context.Context, ...string) ([]interface{}, error)
+        Del(context.Context, string) (bool, error)
+        MDel(context.Context, ...string) ([]bool, error)
     }
 )
 

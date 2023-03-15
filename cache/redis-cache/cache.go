@@ -1,14 +1,14 @@
 package redis_cache
 
 import (
+    "context"
     "fmt"
     "github.com/Zzaniu/tool/cache"
     "github.com/Zzaniu/tool/zlog"
-    "github.com/go-redis/redis"
+    "github.com/go-redis/redis/v8"
     "golang.org/x/sync/singleflight"
     "golang.org/x/xerrors"
     "math/rand"
-    "sync/atomic"
     "time"
 )
 
@@ -49,10 +49,8 @@ const (
 )
 
 var (
-    redisGetScript      = redis.NewScript(redisGetScriptStr)
-    redisStoreScript    = redis.NewScript(redisStoreScriptStr)
-    redisGetScriptSha   atomic.Value
-    redisStoreScriptSha atomic.Value
+    redisGetScript   = redis.NewScript(redisGetScriptStr)
+    redisStoreScript = redis.NewScript(redisStoreScriptStr)
 )
 
 type redisCache struct {
@@ -79,22 +77,11 @@ func (r *redisCache) random100() int {
 // store 存储 value, 使用 lua 脚本去处理, 不允许缓存不设置过期时间
 // 1. 如果 set px nx 失败, 比对一下缓存里面和当前 value 是否一致, 不一致需要 set ex 设置成无效状态
 // 2. 如果发现缓存里面的已经被设置为无效状态了或者 value 是一致的, 那么直接忽略
-func (r *redisCache) store(key string, value interface{}, expiration time.Duration) (bool, error) {
+func (r *redisCache) store(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {
     if len(key) == 0 {
         return false, nil
     }
-
-    sha, ok := redisStoreScriptSha.Load().(string)
-    if !ok {
-        var err error
-        sha, err = redisStoreScript.Load(r.client).Result()
-        if err != nil {
-            return false, xerrors.Errorf("Get Load error: %w", err)
-        }
-        redisStoreScriptSha.Store(sha)
-    }
-
-    result, err := r.client.EvalSha(sha, []string{key}, value, int64(expiration/time.Millisecond), invalidCacheCode, int64(placeholderTime/time.Millisecond)).Result()
+    result, err := redisStoreScript.Run(ctx, r.client, []string{key}, value, int64(expiration/time.Millisecond), invalidCacheCode, int64(placeholderTime/time.Millisecond)).Result()
     if err != nil {
         return false, xerrors.Errorf("Store SetNX error: %w", err)
     }
@@ -105,20 +92,9 @@ func (r *redisCache) store(key string, value interface{}, expiration time.Durati
 
 // Get 获取 value, 使用 lua 脚本去处理, 如果缓存不存在, 直接返回, 如果缓存是 invalidCacheCode, 执行 del key.
 // 如果在缓存中没有获取到数据, 则执行传入的函数去获取数据, 最后执行 set key value ex nx 存到缓存
-func (r *redisCache) Get(key string, f func() (string, error), opts ...cache.Opts) (string, error) {
+func (r *redisCache) Get(ctx context.Context, key string, f func() (string, error), opts ...cache.Opts) (string, error) {
     doRet, err, _ := r.singleFlight.Do(fmt.Sprintf("Get:%s", key), func() (interface{}, error) {
-
-        sha, ok := redisGetScriptSha.Load().(string)
-        if !ok {
-            var err error
-            sha, err = redisGetScript.Load(r.client).Result()
-            if err != nil {
-                return nil, xerrors.Errorf("Get Load error: %w", err)
-            }
-            redisGetScriptSha.Store(sha)
-        }
-
-        result, err := r.client.EvalSha(sha, []string{key}, invalidCacheCode).Result()
+        result, err := redisGetScript.Run(ctx, r.client, []string{key}, invalidCacheCode).Result()
         if err != nil && err != redis.Nil {
             return nil, xerrors.Errorf("Get EvalSha error: %w", err)
         }
@@ -138,7 +114,7 @@ func (r *redisCache) Get(key string, f func() (string, error), opts ...cache.Opt
                 o(&opt)
             }
 
-            ret, err := r.store(key, result, opt.Timeout+opt.RandomTimeout)
+            ret, err := r.store(ctx, key, result, opt.Timeout+opt.RandomTimeout)
             if err != nil {
                 return nil, err
             }
@@ -158,7 +134,7 @@ func (r *redisCache) Get(key string, f func() (string, error), opts ...cache.Opt
 }
 
 // MGet 批量获取
-func (r *redisCache) MGet(keys ...string) ([]interface{}, error) {
+func (r *redisCache) MGet(ctx context.Context, keys ...string) ([]interface{}, error) {
     keysLength := len(keys)
     if keysLength > redisBulkNum {
         return nil, xerrors.Errorf("一次最多操作 %d 个", redisBulkNum)
@@ -169,7 +145,7 @@ func (r *redisCache) MGet(keys ...string) ([]interface{}, error) {
         }
     }
 
-    result, err := r.client.MGet(keys...).Result()
+    result, err := r.client.MGet(ctx, keys...).Result()
     if err != nil {
         return nil, xerrors.Errorf("MGet MGet error: %w", err)
     }
@@ -177,9 +153,9 @@ func (r *redisCache) MGet(keys ...string) ([]interface{}, error) {
 }
 
 // Del 软删除, 就是设置一下状态为 invalidCacheCode
-func (r *redisCache) Del(key string) (bool, error) {
+func (r *redisCache) Del(ctx context.Context, key string) (bool, error) {
     doRet, err, _ := r.singleFlight.Do(fmt.Sprintf("Del:%s", key), func() (interface{}, error) {
-        result, err := r.client.Set(key, invalidCacheCode, placeholderTime).Result()
+        result, err := r.client.Set(ctx, key, invalidCacheCode, placeholderTime).Result()
         if err != nil {
             return false, xerrors.Errorf("Del Set error: %w", err)
         }
@@ -192,7 +168,7 @@ func (r *redisCache) Del(key string) (bool, error) {
 }
 
 // MDel 批量软删除
-func (r *redisCache) MDel(keys ...string) ([]bool, error) {
+func (r *redisCache) MDel(ctx context.Context, keys ...string) ([]bool, error) {
     keysLength := len(keys)
     if keysLength > redisBulkNum {
         return nil, xerrors.Errorf("一次最多操作 %d 个", redisBulkNum)
@@ -205,9 +181,9 @@ func (r *redisCache) MDel(keys ...string) ([]bool, error) {
 
     pipeline := r.client.Pipeline()
     for _, key := range keys {
-        pipeline.Set(key, invalidCacheCode, placeholderTime)
+        pipeline.Set(ctx, key, invalidCacheCode, placeholderTime)
     }
-    res, err := pipeline.Exec()
+    res, err := pipeline.Exec(ctx)
     if err != nil {
         return nil, xerrors.Errorf("MDel pipeline.Exec error: %w", err)
     }
@@ -215,13 +191,13 @@ func (r *redisCache) MDel(keys ...string) ([]bool, error) {
     for _, cmdRes := range res {
         // 处理方式和直接调用同样处理即可
         cmd, ok := cmdRes.(*redis.StatusCmd)
-		if ok {
-			val, err := cmd.Result()
-			if err != nil {
-				return nil, xerrors.Errorf("MDel pipeline.Exec error: %w", err)
-			}
-			ret = append(ret, val == redisOK)
-		}
+        if ok {
+            val, err := cmd.Result()
+            if err != nil {
+                return nil, xerrors.Errorf("MDel pipeline.Exec error: %w", err)
+            }
+            ret = append(ret, val == redisOK)
+        }
     }
     return ret, nil
 }
