@@ -47,11 +47,6 @@ func NewRedisLockWithContext(ctx context.Context, client *redis.Client) distribu
 }
 
 func (r *redisLock) Lock(key string, expire int, opts ...distributed_lock.Options) error {
-    select {
-    case <-r.ctx.Done():
-        return distributed_lock.LockOccupied
-    default:
-    }
     opt := &distributed_lock.Option{Retry: distributed_lock.NoRetry()}
     for _, o := range opts {
         o(opt)
