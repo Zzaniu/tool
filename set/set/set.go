@@ -162,3 +162,7 @@ func NewFromSlice[T comparable](slice []T) *Set[T] {
 func NewSet[T comparable]() *Set[T] {
     return &Set[T]{M: make(map[T]struct{})}
 }
+
+func NewSetWithLength[T comparable](length int) *Set[T] {
+    return &Set[T]{M: make(map[T]struct{}, length)}
+}

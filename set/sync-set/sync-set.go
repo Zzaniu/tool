@@ -237,3 +237,7 @@ func NewFromSlice[T comparable](slice []T) *SyncSet[T] {
 func NewSyncSet[T comparable]() *SyncSet[T] {
     return &SyncSet[T]{M: make(map[T]struct{})}
 }
+
+func NewSyncSetWithLength[T comparable](length int) *SyncSet[T] {
+    return &SyncSet[T]{M: make(map[T]struct{}, length)}
+}
