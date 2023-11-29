@@ -5,7 +5,7 @@ import (
     "encoding/json"
     "github.com/Zzaniu/tool/mq/rabbit"
     "golang.org/x/xerrors"
-    "io/ioutil"
+    "os"
     "path"
 )
 
@@ -80,7 +80,7 @@ func SendMail(product *rabbit.RbMqClient, to, title, body string, opts ...Option
 
     var attachment [][2]string
     for _, fileName := range opt.filePath {
-        file, err := ioutil.ReadFile(fileName)
+        file, err := os.ReadFile(fileName)
         if err != nil {
             return false, xerrors.Errorf("ioutil.ReadFile error, err = %w", err)
         }
@@ -97,8 +97,8 @@ func SendMail(product *rabbit.RbMqClient, to, title, body string, opts ...Option
         return false, xerrors.Errorf("json.Marshal error, err = %w", err)
     }
     if product.Publish(mStr) {
-		return true, nil
+        return true, nil
     } else {
-		return false, nil
+        return false, nil
     }
 }

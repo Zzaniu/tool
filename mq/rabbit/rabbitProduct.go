@@ -296,7 +296,7 @@ func NewAndInitRabbitClient(rbInfo RbInfo, callBack func(amqp.Delivery), opts ..
 func NewAndInitRabbitServer(rbInfo RbInfo, opts ...DialOption) (*RbMqClient, error) {
     product, err := NewRabbitProduct(rbInfo, nil, opts...)
     if err != nil {
-		return nil, err
+        return nil, err
     }
     product.InitRabbitProduct()
     <-product.coonNotifyConnected

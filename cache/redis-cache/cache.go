@@ -92,7 +92,7 @@ func (r *redisCache) store(ctx context.Context, key string, value interface{}, e
 
 // Get 获取 value, 使用 lua 脚本去处理, 如果缓存不存在, 直接返回, 如果缓存是 invalidCacheCode, 执行 del key.
 // 如果在缓存中没有获取到数据, 则执行传入的函数去获取数据, 最后执行 set key value ex nx 存到缓存
-func (r *redisCache) Get(ctx context.Context, key string, f func() (string, error), opts ...cache.Opts) (string, error) {
+func (r *redisCache) Get(ctx context.Context, key string, f func() (interface{}, error), opts ...cache.Opts) (interface{}, error) {
     doRet, err, _ := r.singleFlight.Do(fmt.Sprintf("Get:%s", key), func() (interface{}, error) {
         result, err := redisGetScript.Run(ctx, r.client, []string{key}, invalidCacheCode).Result()
         if err != nil && err != redis.Nil {
@@ -128,9 +128,9 @@ func (r *redisCache) Get(ctx context.Context, key string, f func() (string, erro
     })
 
     if err != nil {
-        return "", err
+        return nil, err
     }
-    return doRet.(string), nil
+    return doRet, nil
 }
 
 // MGet 批量获取
