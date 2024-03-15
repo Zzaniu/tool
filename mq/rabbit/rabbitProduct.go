@@ -3,7 +3,7 @@ package rabbit
 import (
     "fmt"
     "github.com/Zzaniu/tool/zlog"
-    "github.com/streadway/amqp"
+    amqp "github.com/rabbitmq/amqp091-go"
     "golang.org/x/xerrors"
     "time"
 )

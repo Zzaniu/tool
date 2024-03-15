@@ -5,8 +5,8 @@ go 1.18
 require (
 	github.com/go-basic/uuid v1.0.0
 	github.com/go-redis/redis/v8 v8.11.4
+	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/shirou/gopsutil/v3 v3.22.10
-	github.com/streadway/amqp v1.0.0
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/exporters/jaeger v1.11.1
 	go.opentelemetry.io/otel/sdk v1.11.1
