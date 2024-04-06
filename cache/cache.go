@@ -14,7 +14,7 @@ type (
     Opts func(*Option)
 
     Cache interface {
-        Get(context.Context, string, func() (interface{}, error), ...Opts) (interface{}, error)
+        Get(context.Context, string, func() (string, error), ...Opts) (string, error)
         MGet(context.Context, ...string) ([]interface{}, error)
         Del(context.Context, string) (bool, error)
         MDel(context.Context, ...string) ([]bool, error)
