@@ -39,6 +39,7 @@ type (
     ArcChan interface {
         Clone() ArcChan
         Close()
+        IsClosed() bool
     }
 
     emptyArcChanInner struct {
@@ -74,6 +75,11 @@ func (e *emptyArcChanInner) Close() {
     }
 }
 
+// IsClosed 是否真正的已关闭
+func (e *emptyArcChanInner) IsClosed() bool {
+    return e.isClosed.Load()
+}
+
 // WaitClose 等待 chan 真正的关闭.
 // 特别注意: 这里可能永远等不到返回, 因为引用计数可能一直不为 0.
 func (e *emptyArcChanInner) closeAndWait() {
@@ -94,7 +100,7 @@ func (e *EmptyArcChan) Clone() ArcChan {
 
 // IsClosed 是否真正的已关闭
 func (e *EmptyArcChan) IsClosed() bool {
-    return e.inner.isClosed.Load()
+    return e.inner.IsClosed()
 }
 
 // CloseAndWait 等待 chan 真正的关闭
