@@ -36,6 +36,16 @@ import (
 )
 
 func TestNewEmptyArcChan(t *testing.T) {
+    t.Run("is closed", func(t *testing.T) {
+        x := NewEmptyArcChan()
+        if !x.IsClosed() {
+            t.Log("not closed")
+        }
+        x.CloseAndWait()
+        if x.IsClosed() {
+            t.Log("closed")
+        }
+    })
     t.Run("ArcChan", func(t *testing.T) {
         for i := 0; i < 1000; i++ {
             x := NewEmptyArcChan()

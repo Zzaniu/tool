@@ -92,6 +92,11 @@ func (e *EmptyArcChan) Clone() ArcChan {
     return e.inner.Clone()
 }
 
+// IsClosed 是否真正的已关闭
+func (e *EmptyArcChan) IsClosed() bool {
+    return e.inner.isClosed.Load()
+}
+
 // CloseAndWait 等待 chan 真正的关闭
 func (e *EmptyArcChan) CloseAndWait() {
     e.inner.closeAndWait()
