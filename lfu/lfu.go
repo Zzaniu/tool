@@ -87,8 +87,6 @@ func (l *lfu) Set(k string, v interface{}) {
     l.Lock()
     defer l.Unlock()
 
-    var item *kvItem
-
     // set 也算是一次访问, 所以如果该 key 之前就存在的话, 需要同时去更新频率
     if item, ok := l.kv[k]; ok {
         item.v = v
@@ -96,7 +94,9 @@ func (l *lfu) Set(k string, v interface{}) {
         return
     }
 
-    // 先把头节点取出来, 看下头节点是否为 nil 或者频率是不是为 1, 如果是则创建频率为1的新 node 从最前面插入,
+    var item *kvItem
+
+    // 先把头节点取出来, 看下头节点是否为 nil 或者频率是不是为 1, 如果不是则创建频率为1的新 node 从最前面插入,
     // 否则直接放到头节点的 items 中即可, 当然了, 肯定是需要放入 c.kv 中的啦
     front := l.freqList.Front()
     if front == nil || front.Value.(*freqNode).freq != 1 {
@@ -202,6 +202,7 @@ func (l *lfu) increment(item *kvItem) {
 
     // 如果下一个 node 是 nil 或者下一个 node 的频率不是当前频率+1的话, 需要新建一个 node 并插入,
     // 否则只需要把当前 item 从当前 items 删除并插入下一个 node 中的 items, 最后变更 item.parent 为新的即可
+    // note: 双向链表中 node 的 value 我们这里一定是存的 *freqNode, 所以只要 next 不是 nil 就一定有值, nextNode 也一定不是 nil
     if next == nil || (currNode.freq+1 != nextNode.freq) {
         node := &freqNode{
             freq: currNode.freq + 1,
@@ -220,7 +221,7 @@ func (l *lfu) increment(item *kvItem) {
     delete(currNode.items, item)
     // 如果原来的节点的 items 为空, 直接删除原来的节点
     if len(currNode.items) == 0 {
-		l.freqList.Remove(curr)
+        l.freqList.Remove(curr)
     }
 
     return

@@ -59,7 +59,7 @@ func TestNewEmptyArcChan(t *testing.T) {
                     closer.Close()
                 }(closer)
             }
-            time.Sleep(time.Millisecond * 10)
+            time.Sleep(time.Millisecond * 1)
             x.CloseAndWait()
         }
     })
