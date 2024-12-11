@@ -35,7 +35,8 @@ import (
     "go.opentelemetry.io/otel"
     "go.opentelemetry.io/otel/attribute"
     "go.opentelemetry.io/otel/baggage"
-    "go.opentelemetry.io/otel/exporters/jaeger"
+    "go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+    "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
     "go.opentelemetry.io/otel/propagation"
     "go.opentelemetry.io/otel/sdk/resource"
     tracesdk "go.opentelemetry.io/otel/sdk/trace"
@@ -111,7 +112,7 @@ func Extract(ctx context.Context, p propagation.TextMapPropagator, metadata *met
 func SetJaegerTracerProvider(tra Trace) error {
     // 创建 Jaeger 接收者
     var (
-        exp  *jaeger.Exporter
+        exp  *otlptrace.Exporter
         err  error
         opts []tracesdk.TracerProviderOption
     )
@@ -124,7 +125,7 @@ func SetJaegerTracerProvider(tra Trace) error {
             attribute.String("env", tra.Model),
         ))}
     if len(tra.Endpoint) > 0 {
-        exp, err = jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(tra.Endpoint)))
+        exp, err = otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(tra.Endpoint))
         if err != nil {
             return err
         }
@@ -189,7 +190,7 @@ func SpanInfo(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
 func PeerFromCtx(ctx context.Context) string {
     p, ok := peer.FromContext(ctx)
     if !ok {
-		return ""
+        return ""
     }
 
     return p.Addr.String()
