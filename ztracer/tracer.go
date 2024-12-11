@@ -40,7 +40,7 @@ import (
     "go.opentelemetry.io/otel/sdk/resource"
     tracesdk "go.opentelemetry.io/otel/sdk/trace"
     "go.opentelemetry.io/otel/sdk/trace/tracetest"
-    semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+    semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
     "go.opentelemetry.io/otel/trace"
     "google.golang.org/grpc/metadata"
     "google.golang.org/grpc/peer"
@@ -122,7 +122,7 @@ func SetJaegerTracerProvider(tra Trace) error {
             attribute.String("env", tra.Model),
         ))}
     if len(tra.Endpoint) > 0 {
-        exp, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpoint(tra.Endpoint))
+        exp, err := otlptracehttp.New(context.Background(), otlptracehttp.WithEndpointURL(tra.Endpoint))
         if err != nil {
             return err
         }
