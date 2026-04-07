@@ -2,8 +2,9 @@ package rabbit
 
 import (
     "errors"
-    amqp "github.com/rabbitmq/amqp091-go"
     "time"
+
+    amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type (
@@ -49,6 +50,7 @@ type (
     options struct {
         ReconnectDelay time.Duration
         ResendDelay    time.Duration
+        Declare        bool
         Durable        bool
         DeadDurable    bool
         ExOpt          ExchangeDeclareOpt
@@ -203,6 +205,13 @@ func WithConsumeOpt(consumeOpt ConsumeOpt) DialOption {
     return newFuncDialOption(func(o *options) {
         dealAmqpTable(o.ConsumeOpt.Arguments, consumeOpt.Arguments)
         o.ConsumeOpt = consumeOpt
+    })
+}
+
+// WithDeclare 是否声明
+func WithDeclare() DialOption {
+    return newFuncDialOption(func(o *options) {
+        o.Declare = true
     })
 }
 
