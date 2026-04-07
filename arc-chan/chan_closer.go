@@ -31,8 +31,9 @@ Desc   :
 package arc_chan
 
 import (
-    "github.com/Zzaniu/tool/zlog"
     "sync/atomic"
+
+    "github.com/Zzaniu/tool/zlog"
 )
 
 type (

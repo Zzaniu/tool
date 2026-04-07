@@ -33,6 +33,7 @@ package safe_goroutine
 import (
     "context"
     "fmt"
+    "runtime"
     "testing"
     "time"
 )
@@ -50,9 +51,9 @@ func TestSafeGoroutine(t *testing.T) {
         fmt.Println("task 2")
         return nil
     }, func() error {
-        //time.Sleep(time.Millisecond * 100)
+        // time.Sleep(time.Millisecond * 100)
         return fmt.Errorf("tsak3 error")
-        //return nil
+        // return nil
     })
     s.Do()
     if err := s.Wait(); err != nil {
@@ -113,6 +114,31 @@ func TestSafeGoroutine4(t *testing.T) {
         if err == nil {
             t.Error("程序错误")
         }
+    }
+}
+
+// 压测逻辑：发送大量极短的任务
+func TestSafeGoroutine_RacePanic(t *testing.T) {
+    // 适当增加 GOMAXPROCS 增加并行度
+    runtime.GOMAXPROCS(runtime.NumCPU())
+
+    for i := 0; i < 10000; i++ { // 多次运行以捕捉随机性
+        sg := NewSafeGoroutineWithTaskNum(context.Background(), 10)
+
+        taskCount := 1000 // 每个周期 1000 个任务
+        tasks := make([]func() error, taskCount)
+        for j := 0; j < taskCount; j++ {
+            tasks[j] = func() error {
+                // 极短任务，几乎瞬间完成
+                return nil
+            }
+        }
+
+        sg.Add(tasks...)
+
+        // 执行并等待
+        // 如果我的分析正确，这里会大概率触发 panic: close of nil channel
+        _ = sg.DoAndWait()
     }
 }
 

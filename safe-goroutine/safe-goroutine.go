@@ -157,12 +157,12 @@ func (s *safeGoroutine) do2() {
         s.WaitGroup.Add(1)
         go func() {
             defer s.WaitGroup.Done()
-            var (
-                err error
-                t   task
-                ok  bool
-            )
             for {
+                var (
+                    err error
+                    t   task
+                    ok  bool
+                )
                 select { // 分发任务的时候就有可能被取消掉了
                 case <-s.ctx.Done(): // 取消了
                     err = s.ctx.Err()
@@ -178,6 +178,7 @@ func (s *safeGoroutine) do2() {
                 select {
                 case <-s.ctx.Done(): // 取消了
                     err = s.ctx.Err()
+                // t.Done 是使用指针接收的
                 case err = <-t.Done(s.ctx):
                 }
                 if err != nil { // 取消了或者任务有报错
