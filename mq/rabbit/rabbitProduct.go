@@ -1,10 +1,12 @@
 package rabbit
 
 import (
+    "context"
     "fmt"
     "time"
 
     "github.com/Zzaniu/tool/zlog"
+    "github.com/go-basic/uuid"
     amqp "github.com/rabbitmq/amqp091-go"
     "golang.org/x/xerrors"
 )
@@ -233,6 +235,7 @@ func (rabbitProduct *RbMqClient) PublishMulti(msgs [][]byte) (bool, int) {
 
 // Consume 消费消息
 // prefetchCount 预取数量，设置为1的话，可以实现性能高的服务器消费的数量多
+// Deprecated: 请使用 Consume2
 func (rabbitProduct *RbMqClient) Consume(prefetchCount int) {
     defer func() {
         e := recover()
@@ -249,6 +252,7 @@ func (rabbitProduct *RbMqClient) Consume(prefetchCount int) {
             _ = rabbitProduct.connection.Close()
         }
     }()
+    consumerTag := uuid.New()
     for {
         ch, err := rabbitProduct.connection.Channel()
         if err != nil {
@@ -260,7 +264,7 @@ func (rabbitProduct *RbMqClient) Consume(prefetchCount int) {
         if err = ch.Qos(prefetchCount, 0, false); err != nil {
             zlog.Fatalf("开启预取模式失败, err = %+v\n", xerrors.Errorf("%w", err))
         }
-        delvers, err := ch.Consume(rabbitProduct.rbInfo.QueueName, amqp.ExchangeDirect, false, false, false, false, nil)
+        delvers, err := ch.Consume(rabbitProduct.rbInfo.QueueName, consumerTag, false, false, false, false, nil)
         if err != nil {
             zlog.Fatalf("开启消费失败, err = %+v\n", xerrors.Errorf("%w", err))
         }
@@ -270,6 +274,68 @@ func (rabbitProduct *RbMqClient) Consume(prefetchCount int) {
         }
         _ = ch.Close()
         select {
+        case <-rabbitProduct.done:
+            return
+        case <-rabbitProduct.coonNotifyConnected:
+        }
+    }
+}
+
+// Consume2 消费消息, 使用 context 实现优雅停止消费
+// prefetchCount 预取数量，设置为1的话，可以实现性能高的服务器消费的数量多
+func (rabbitProduct *RbMqClient) Consume2(ctx context.Context, prefetchCount int) {
+    defer func() {
+        e := recover()
+        if e != nil {
+            if err, ok := e.(error); ok {
+                zlog.Fatalf("消费端报错了, err = %+v\n", xerrors.Errorf("%w", err))
+            } else {
+                zlog.Fatalf("消费端报错了, err = %v\n", e)
+            }
+        }
+    }()
+    defer func() {
+        if !rabbitProduct.connection.IsClosed() {
+            _ = rabbitProduct.connection.Close()
+        }
+    }()
+
+    consumerTag := uuid.New()
+    for {
+        ch, err := rabbitProduct.connection.Channel()
+        if err != nil {
+            // ch连接失败，休眠10S后重连
+            zlog.Errorf("Channel连接失败, err = %+v\n", xerrors.Errorf("%w", err))
+            time.Sleep(rabbitProduct.rbInfo.opts.ReconnectDelay)
+            continue
+        }
+        if err = ch.Qos(prefetchCount, 0, false); err != nil {
+            zlog.Fatalf("开启预取模式失败, err = %+v\n", xerrors.Errorf("%w", err))
+        }
+        delvers, err := ch.Consume(rabbitProduct.rbInfo.QueueName, consumerTag, false, false, false, false, nil)
+        if err != nil {
+            zlog.Fatalf("开启消费失败, err = %+v\n", xerrors.Errorf("%w", err))
+        }
+        done := make(chan struct{})
+        go func() {
+            // 没有消息的时候就阻塞在这里。当连接断开的时候(断网)，这里直接退出，然后去判断是否重新连接上了，连接上了会再次启动监听
+            for delver := range delvers {
+                rabbitProduct.callBack(delver)
+            }
+            select {
+            case <-ctx.Done():
+                rabbitProduct.Close()
+                close(done)
+            default:
+            }
+        }()
+        select {
+        case <-ctx.Done():
+            if !ch.IsClosed() {
+                _ = ch.Cancel(consumerTag, false)
+            }
+            <-done
+            return
         case <-rabbitProduct.done:
             return
         case <-rabbitProduct.coonNotifyConnected:

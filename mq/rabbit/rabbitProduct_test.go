@@ -31,9 +31,12 @@ Desc   :
 package rabbit
 
 import (
+    "context"
     "fmt"
-    amqp "github.com/rabbitmq/amqp091-go"
     "testing"
+    "time"
+
+    amqp "github.com/rabbitmq/amqp091-go"
 )
 
 var rbInfo = RbInfo{
@@ -77,6 +80,48 @@ func TestNewAndInitRabbit(t *testing.T) {
         }
     }()
     for i := 0; i < 100; i++ {
+        ch <- fmt.Sprintf("%d, test", i)
+    }
+    close(ch)
+    <-endCh
+}
+
+func TestNewAndInitRabbit2(t *testing.T) {
+    ch := make(chan string, 300)
+    endCh := make(chan struct{})
+    go func() {
+        client, err := NewAndInitRabbitClient(rbInfo, func(delivery amqp.Delivery) {
+            s := string(delivery.Body)
+            fmt.Printf("s: %s\n", s)
+            if err := delivery.Ack(false); err != nil {
+                t.Error(err)
+            }
+            time.Sleep(time.Second)
+        })
+        if err != nil {
+            t.Error(err)
+        }
+        ctx, cancelFunc := context.WithCancel(context.Background())
+        go func() {
+            time.Sleep(100 * time.Second)
+            cancelFunc()
+            fmt.Println("cancelFunc")
+        }()
+        client.Consume2(ctx, 1)
+        fmt.Println("======== end =======")
+        close(endCh)
+    }()
+    go func() {
+        conn, err := NewAndInitRabbitServer(rbInfo)
+        if err != nil {
+            t.Error(err)
+        }
+
+        for s := range ch {
+            conn.Publish([]byte(s))
+        }
+    }()
+    for i := 0; i < 300; i++ {
         ch <- fmt.Sprintf("%d, test", i)
     }
     close(ch)
