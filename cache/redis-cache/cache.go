@@ -1,15 +1,24 @@
+// Package redis_cache
+// TODO: 这个方案有问题, 无法完全解决旧值被写入的风险.
+//  具体如下:
+//  1. A执行get,没有命中缓存, 执行f()去DB获取数据, 这个过程假设比较久
+//  2. B执行store写入缓存, 发现不一致, 设置为-410
+//  3. C执行get, 发现是-410, 直接删除缓存
+//  4. A执行完f(), 将旧数据写入缓存
+//  解决方案: 不再使用-410, 加一个channel异步进行延迟双删
 package redis_cache
 
 import (
     "context"
     "fmt"
+    "math/rand"
+    "time"
+
     "github.com/Zzaniu/tool/cache"
     "github.com/Zzaniu/tool/zlog"
     "github.com/go-redis/redis/v8"
     "golang.org/x/sync/singleflight"
     "golang.org/x/xerrors"
-    "math/rand"
-    "time"
 )
 
 const (
