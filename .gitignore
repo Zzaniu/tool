@@ -17,3 +17,5 @@
 *-test.*
 *_test1.*
 logs
+.pi
+docs
